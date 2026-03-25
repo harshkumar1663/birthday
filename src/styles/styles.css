@@ -97,6 +97,28 @@ body {
   color: var(--text-main);
   text-wrap: balance;
   text-shadow: 0 8px 22px rgba(95, 49, 72, 0.16);
+  min-height: 1.3em;
+}
+
+.typing-cursor {
+  display: inline-block;
+  width: 2px;
+  height: 0.95em;
+  margin-left: 4px;
+  vertical-align: -0.08em;
+  background: rgba(63, 36, 52, 0.72);
+  animation: typingBlink 0.82s steps(1) infinite;
+}
+
+@keyframes typingBlink {
+  0%,
+  48% {
+    opacity: 1;
+  }
+  49%,
+  100% {
+    opacity: 0;
+  }
 }
 
 .scene-gap {

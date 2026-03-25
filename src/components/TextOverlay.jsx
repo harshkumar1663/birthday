@@ -1,106 +1,101 @@
-import React, { useEffect, useMemo, useRef } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 
 const EMOTIONAL_PATTERN = /(always|home|yes|choosing|answer|clear)/i
 
-const lineVariants = {
-  hidden: {
-    opacity: 0,
-    y: 26,
-    filter: 'blur(8px)'
-  },
-  visible: custom => ({
-    opacity: 1,
-    y: 0,
-    filter: 'blur(0px)',
-    transition: {
-      delay: custom.delay,
-      duration: custom.duration,
-      ease: [0.22, 1, 0.36, 1]
-    }
-  })
-}
+const wait = ms => new Promise(resolve => setTimeout(resolve, ms))
 
 export default function TextOverlay({ scene, sceneIndex, canProceed, isLastScene, onComplete, onNext }) {
-  const completeTimer = useRef(null)
-
-  const plan = useMemo(() => {
-    if (!scene?.text?.length) return []
-
-    const timing = scene.textTiming || {}
-    const baseDelay = timing.baseDelay ?? 0.35
-    const stagger = timing.stagger ?? 0.9
-    const emotionalMultiplier = timing.emotionalMultiplier ?? 1.2
-
-    let runningDelay = baseDelay
-
-    return scene.text.map(line => {
-      if (line.trim().length === 0) {
-        runningDelay += 0.42 * emotionalMultiplier
-        return {
-          line,
-          isPause: true,
-          delay: runningDelay,
-          duration: 0.2
-        }
-      }
-
-      const lineFactor = EMOTIONAL_PATTERN.test(line) ? emotionalMultiplier : 1
-      const duration = Math.min(2, Math.max(0.72, line.length * 0.043 * lineFactor))
-
-      const entry = {
-        line,
-        isPause: false,
-        delay: runningDelay,
-        duration
-      }
-
-      runningDelay += stagger * lineFactor
-      return entry
-    })
-  }, [scene])
+  const [typedLines, setTypedLines] = useState([])
+  const [activeLine, setActiveLine] = useState(-1)
+  const runIdRef = useRef(0)
 
   useEffect(() => {
-    if (!plan.length) return undefined
+    runIdRef.current += 1
+    const runId = runIdRef.current
 
-    const total = plan.reduce((max, entry) => {
-      return Math.max(max, entry.delay + entry.duration)
-    }, 0)
-
-    if (completeTimer.current) {
-      clearTimeout(completeTimer.current)
+    if (!scene?.text?.length) {
+      setTypedLines([])
+      setActiveLine(-1)
+      return undefined
     }
 
-    completeTimer.current = setTimeout(() => {
-      onComplete?.()
-    }, total * 1000 + 220)
+    const lines = scene.text
+    setTypedLines(new Array(lines.length).fill(''))
+    setActiveLine(-1)
 
-    return () => {
-      if (completeTimer.current) {
-        clearTimeout(completeTimer.current)
+    const timing = scene.textTiming || {}
+    const baseDelayMs = (timing.baseDelay ?? 0.35) * 1000
+    const emotionalMultiplier = timing.emotionalMultiplier ?? 1.2
+
+    const runTyping = async () => {
+      await wait(baseDelayMs)
+      if (runIdRef.current !== runId) return
+
+      for (let i = 0; i < lines.length; i += 1) {
+        if (runIdRef.current !== runId) return
+
+        const line = lines[i]
+
+        if (line.trim().length === 0) {
+          setActiveLine(-1)
+          await wait(380 * emotionalMultiplier)
+          continue
+        }
+
+        const isEmotional = EMOTIONAL_PATTERN.test(line)
+        const lineFactor = isEmotional ? emotionalMultiplier : 1
+        const charDelay = Math.min(80, Math.max(22, 27 * lineFactor))
+        const lineEndDelay = 260 * lineFactor
+
+        setActiveLine(i)
+        let current = ''
+
+        for (const ch of line) {
+          if (runIdRef.current !== runId) return
+          current += ch
+
+          setTypedLines(prev => {
+            const next = [...prev]
+            next[i] = current
+            return next
+          })
+
+          await wait(charDelay)
+        }
+
+        await wait(lineEndDelay)
+      }
+
+      if (runIdRef.current === runId) {
+        setActiveLine(-1)
+        onComplete?.()
       }
     }
-  }, [plan, onComplete, sceneIndex])
+
+    runTyping()
+
+    return () => {
+      runIdRef.current += 1
+    }
+  }, [scene, sceneIndex, onComplete])
 
   return (
     <div className="text-overlay" onClick={onNext} role="button" tabIndex={0}>
       <div className={`scene-text-container ${isLastScene ? 'scene-text-final' : ''}`}>
-        {plan.map((entry, index) => {
-          if (entry.isPause) {
+        {(scene?.text || []).map((line, index) => {
+          if (line.trim().length === 0) {
             return <div key={`pause-${index}`} className="scene-gap" />
           }
 
           return (
-            <motion.p
+            <p
               key={`${sceneIndex}-${index}`}
               className="scene-line"
-              custom={{ delay: entry.delay, duration: entry.duration }}
-              variants={lineVariants}
-              initial="hidden"
-              animate="visible"
             >
-              {entry.line}
-            </motion.p>
+              {typedLines[index] || ''}
+              {activeLine === index && <span className="typing-cursor" />}
+            </p>
           )
         })}
       </div>
