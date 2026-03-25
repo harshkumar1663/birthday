@@ -65,6 +65,7 @@ export default function App() {
       <TextOverlay
         scene={activeScene}
         sceneIndex={currentScene}
+        isStarted={isStarted}
         canProceed={canProceed}
         isLastScene={isLastScene}
         onComplete={handleTextComplete}

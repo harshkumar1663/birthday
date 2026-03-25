@@ -5,7 +5,7 @@ const EMOTIONAL_PATTERN = /(always|home|yes|choosing|answer|clear)/i
 
 const wait = ms => new Promise(resolve => setTimeout(resolve, ms))
 
-export default function TextOverlay({ scene, sceneIndex, canProceed, isLastScene, onComplete, onNext }) {
+export default function TextOverlay({ scene, sceneIndex, isStarted, canProceed, isLastScene, onComplete, onNext }) {
   const [typedLines, setTypedLines] = useState([])
   const [activeLine, setActiveLine] = useState(-1)
   const runIdRef = useRef(0)
@@ -14,7 +14,7 @@ export default function TextOverlay({ scene, sceneIndex, canProceed, isLastScene
     runIdRef.current += 1
     const runId = runIdRef.current
 
-    if (!scene?.text?.length) {
+    if (!isStarted || !scene?.text?.length) {
       setTypedLines([])
       setActiveLine(-1)
       return undefined
@@ -25,7 +25,7 @@ export default function TextOverlay({ scene, sceneIndex, canProceed, isLastScene
     setActiveLine(-1)
 
     const timing = scene.textTiming || {}
-    const baseDelayMs = (timing.baseDelay ?? 0.35) * 1000
+    const baseDelayMs = (timing.baseDelay ?? 0.35) * 1200
     const emotionalMultiplier = timing.emotionalMultiplier ?? 1.2
 
     const runTyping = async () => {
@@ -39,14 +39,14 @@ export default function TextOverlay({ scene, sceneIndex, canProceed, isLastScene
 
         if (line.trim().length === 0) {
           setActiveLine(-1)
-          await wait(380 * emotionalMultiplier)
+          await wait(520 * emotionalMultiplier)
           continue
         }
 
         const isEmotional = EMOTIONAL_PATTERN.test(line)
         const lineFactor = isEmotional ? emotionalMultiplier : 1
-        const charDelay = Math.min(80, Math.max(22, 27 * lineFactor))
-        const lineEndDelay = 260 * lineFactor
+        const charDelay = Math.min(130, Math.max(40, 44 * lineFactor))
+        const lineEndDelay = 420 * lineFactor
 
         setActiveLine(i)
         let current = ''
@@ -78,7 +78,7 @@ export default function TextOverlay({ scene, sceneIndex, canProceed, isLastScene
     return () => {
       runIdRef.current += 1
     }
-  }, [scene, sceneIndex, onComplete])
+  }, [scene, sceneIndex, isStarted, onComplete])
 
   return (
     <div className="text-overlay" onClick={onNext} role="button" tabIndex={0}>
