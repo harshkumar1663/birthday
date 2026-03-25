@@ -98,6 +98,25 @@ export default function TextOverlay({ scene, sceneIndex, isStarted, canProceed, 
             </p>
           )
         })}
+
+        {isLastScene && canProceed && (
+          <motion.div
+            className="final-video-wrap"
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+          >
+            <iframe
+              className="final-video"
+              src="https://www.youtube.com/embed/uKbUOgaveWY"
+              title="Shin-chan happy birthday song"
+              frameBorder="0"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              referrerPolicy="strict-origin-when-cross-origin"
+              allowFullScreen
+            />
+          </motion.div>
+        )}
       </div>
 
       <motion.div
