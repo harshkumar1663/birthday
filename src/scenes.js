@@ -46,7 +46,7 @@ export const SCENES = [
   },
   {
     id: 'rewind',
-    text: ['If I could go back now,', '', 'I would not just say yes...', 'I would show up early.', "", "Probably 10min early."],
+    text: ['If I could go back now,', '', 'I would not just say yes...', 'I would show up early.', "", "Probably ten minutes early."],
     camera: {
       zoom: 1.08,
       pan: [-0.3, 0.1],
