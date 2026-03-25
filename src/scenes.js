@@ -242,7 +242,7 @@ export const SCENES = [
   },
   {
     id: 'birthday-finale',
-    text: ['AB IDHAR AAO ❤️', '', 'HAPPY BIRTHDAY TO YOU'],
+    text: ['AB IDHAR AAO ❤️', '', 'HAPPY BIRTHDAY TO YOU', "~ H."],
     camera: {
       zoom: 1.58,
       pan: [0, -0.02],
