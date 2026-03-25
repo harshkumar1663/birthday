@@ -1,0 +1,12 @@
+node_modules
+.git
+.vscode
+.idea
+.vercel
+*.log
+*.md
+AUDIO_SETUP.md
+CUSTOMIZATION.md
+CUSTOMIZATION_3D.md
+DEPLOYMENT.md
+QUICKSTART.md
