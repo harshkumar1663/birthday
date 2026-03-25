@@ -16,7 +16,7 @@ export const SCENES = [
   },
   {
     id: 'question-memory',
-    text: ['Last year, on your birthday,', '', 'you asked me,', '"free ho? kahi chaloge?"'],
+    text: ['Last year, on your birthday,', '', 'you asked me,', '"kya tum still chal rahe ho?"'],
     camera: {
       zoom: 1.04,
       pan: [-0.2, 0.25],
@@ -211,7 +211,7 @@ export const SCENES = [
   },
   {
     id: 'question-repeat',
-    text: ['"free ho? kahi chaloge?"'],
+    text: ['"kya tum still chal rahe ho?"'],
     camera: {
       zoom: 1.4,
       pan: [0, 0.06],
@@ -226,7 +226,7 @@ export const SCENES = [
   },
   {
     id: 'resolution',
-    text: ['The answer is yes.', '', 'Always.'],
+    text: ['The answer is yes.', '', 'Always'],
     camera: {
       zoom: 1.5,
       pan: [0, -0.05],
