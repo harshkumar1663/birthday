@@ -1,0 +1,369 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+:root {
+    --ease-smooth: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    --ease-bounce: cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    --text-color: #2a2a2a;
+    --text-light: #ffffff;
+}
+
+html, body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    font-family: 'Poppins', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: linear-gradient(135deg, #faf6f1 0%, #f5e6d3 100%);
+    color: var(--text-color);
+}
+
+body {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 1.2s ease-in-out;
+    background-attachment: fixed;
+}
+
+/* Scene Gradients (per-scene backgrounds) */
+body.scene-0 {
+    background: linear-gradient(135deg, #ffeaa7 0%, #fab1a0 50%, #ff7675 100%);
+}
+
+body.scene-1 {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 50%, #dee2e6 100%);
+}
+
+body.scene-2 {
+    background: linear-gradient(135deg, #ffe0ec 0%, #ffb3d9 50%, #ff80b0 100%);
+}
+
+body.scene-3 {
+    background: linear-gradient(135deg, #ffd6e8 0%, #ffbcd6 50%, #ff9fcb 100%);
+}
+
+body.scene-4 {
+    background: linear-gradient(135deg, #fab1a0 0%, #ffb3ba 50%, #ffc0cb 100%);
+}
+
+body.scene-5 {
+    background: linear-gradient(135deg, #ffeaa7 0%, #fff5d6 50%, #fffadc 100%);
+}
+
+body.scene-6 {
+    background: linear-gradient(135deg, #ffeaf3 0%, #ffd9e9 50%, #fff5fa 100%);
+}
+
+body.scene-end {
+    background: linear-gradient(135deg, #ffe6f1 0%, #ffd3e7 50%, #ffc1dc 100%);
+}
+
+/* Container */
+.container {
+    width: 100%;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    position: relative;
+    cursor: pointer;
+    user-select: none;
+}
+
+/* Scene Wrapper */
+.scene-wrapper {
+    max-width: 500px;
+    width: 100%;
+    min-height: 300px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    position: relative;
+}
+
+/* Scene Content */
+.scene-content {
+    width: 100%;
+    line-height: 1.8;
+    letter-spacing: 0.8px;
+    font-weight: 300;
+    text-transform: lowercase;
+    font-size: 1.2rem;
+    animation: fadeInUp 0.8s var(--ease-smooth) forwards;
+    opacity: 0;
+}
+
+@media (max-width: 768px) {
+    .scene-content {
+        font-size: 1.1rem;
+        line-height: 1.7;
+        letter-spacing: 0.6px;
+    }
+}
+
+@media (max-width: 480px) {
+    .scene-content {
+        font-size: 1rem;
+        line-height: 1.6;
+        letter-spacing: 0.5px;
+    }
+
+    .container {
+        padding: 1.5rem;
+    }
+}
+
+/* Text Lines */
+.scene-line {
+    display: block;
+    margin: 0.8rem 0;
+    min-height: 1.8em;
+}
+
+/* Typing Effect */
+.typing-cursor {
+    display: inline-block;
+    width: 2px;
+    height: 1.2em;
+    background-color: var(--text-color);
+    margin-left: 2px;
+    animation: blinkCursor 0.7s infinite;
+    vertical-align: text-bottom;
+}
+
+@keyframes blinkCursor {
+    0%, 49% { opacity: 1; }
+    50%, 100% { opacity: 0; }
+}
+
+/* Animations */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes fadeOut {
+    from {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    to {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+}
+
+@keyframes fadeInLight {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+/* Scene Transition Out */
+.scene-content.exiting {
+    animation: fadeOut 0.6s var(--ease-smooth) forwards;
+}
+
+/* Continue Hint */
+.continue-hint {
+    position: absolute;
+    bottom: 3rem;
+    font-size: 0.85rem;
+    letter-spacing: 0.8px;
+    text-transform: lowercase;
+    opacity: 0;
+    animation: fadeInLight 1.5s var(--ease-smooth) 0.8s forwards;
+    pointer-events: none;
+    color: rgba(42, 42, 42, 0.4);
+    transition: opacity 0.4s ease;
+}
+
+body.scene-0 .continue-hint,
+body.scene-3 .continue-hint {
+    color: rgba(255, 255, 255, 0.4);
+}
+
+.continue-hint.hidden {
+    opacity: 0 !important;
+}
+
+.continue-hint.visible {
+    opacity: 1 !important;
+}
+
+/* Final Message Styles */
+.final-message {
+    font-size: 1.4rem;
+    font-weight: 300;
+    letter-spacing: 1px;
+    animation: fadeInUp 1s var(--ease-smooth) forwards;
+    opacity: 0;
+}
+
+.final-subtitle {
+    font-size: 0.95rem;
+    letter-spacing: 0.8px;
+    margin-top: 2rem;
+    animation: fadeInLight 1.2s var(--ease-smooth) 0.6s forwards;
+    opacity: 0;
+    color: rgba(42, 42, 42, 0.6);
+}
+
+body.scene-end .final-subtitle {
+    color: rgba(42, 42, 42, 0.7);
+}
+
+/* Audio Toggle Button */
+.audio-toggle {
+    position: fixed;
+    top: 1.5rem;
+    right: 1.5rem;
+    width: 44px;
+    height: 44px;
+    border: none;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(8px);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-color);
+    transition: all 0.3s ease;
+    z-index: 100;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.audio-toggle:hover {
+    background: rgba(255, 255, 255, 0.9);
+    transform: scale(1.1);
+}
+
+.audio-toggle:active {
+    transform: scale(0.95);
+}
+
+.audio-toggle svg {
+    width: 20px;
+    height: 20px;
+}
+
+.audio-toggle.muted {
+    opacity: 0.6;
+}
+
+@media (max-width: 480px) {
+    .audio-toggle {
+        width: 40px;
+        height: 40px;
+        top: 1rem;
+        right: 1rem;
+    }
+
+    .audio-toggle svg {
+        width: 18px;
+        height: 18px;
+    }
+}
+
+/* Loading and Disabled States */
+.container.disabled {
+    pointer-events: none;
+}
+
+/* Smooth color transitions for body */
+body {
+    transition: background 1.2s var(--ease-smooth);
+}
+
+/* Text color adjustment for dark scenes */
+body.scene-3 .scene-content,
+body.scene-3 .continue-hint {
+    color: var(--text-light);
+}
+
+body.scene-3 .final-message,
+body.scene-3 .final-subtitle {
+    color: var(--text-light);
+}
+
+body.scene-3 .final-subtitle {
+    color: rgba(255, 255, 255, 0.7);
+}
+
+/* Accessibility */
+@media (prefers-reduced-motion: reduce) {
+    * {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+.app {
+  width: 100%;
+  height: 100vh;
+  overflow: hidden;
+  position: relative;
+  background: black;
+  color: white;
+  font-family: 'Inter', sans-serif;
+}
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  text-align: center;
+  cursor: pointer;
+}
+
+.line {
+  font-size: 1.4rem;
+  opacity: 0.95;
+  letter-spacing: 0.5px;
+}
+
+/* ✨ blinking cursor on last line */
+.line:last-child::after {
+  content: '|';
+  margin-left: 4px;
+  animation: blink 1s infinite;
+}
+
+@keyframes blink {
+  50% { opacity: 0; }
+}
+
+.final {
+  text-align: center;
+}
+
+.final-main {
+  font-size: 2rem;
+  margin-bottom: 10px;
+}
+
+.final-sub {
+  font-size: 1.2rem;
+  opacity: 0.8;
+}
