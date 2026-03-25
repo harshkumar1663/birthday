@@ -13,8 +13,6 @@ export default function App() {
   const [canProceed, setCanProceed] = useState(false)
   const [transitionPhase, setTransitionPhase] = useState('idle')
   const [isStarted, setIsStarted] = useState(false)
-  const [isMuted, setIsMuted] = useState(false)
-  const [volume, setVolume] = useState(0.6)
   const timersRef = useRef([])
 
   const activeScene = useMemo(() => SCENES[currentScene], [currentScene])
@@ -78,8 +76,6 @@ export default function App() {
       <SoundManager
         scene={activeScene}
         enabled={isStarted}
-        muted={isMuted}
-        volume={volume}
       />
 
       <AnimatePresence>
@@ -103,29 +99,6 @@ export default function App() {
           </motion.div>
         )}
       </AnimatePresence>
-
-      <div className="audio-controls">
-        <button
-          className="mute-toggle"
-          onClick={() => setIsMuted(prev => !prev)}
-          aria-label={isMuted ? 'Unmute soundtrack' : 'Mute soundtrack'}
-        >
-          {isMuted ? 'Sound Off' : 'Sound On'}
-        </button>
-
-        <label className="volume-wrap" htmlFor="volume-slider">
-          <span>Volume</span>
-          <input
-            id="volume-slider"
-            type="range"
-            min="0"
-            max="1"
-            step="0.01"
-            value={volume}
-            onChange={e => setVolume(Number(e.target.value))}
-          />
-        </label>
-      </div>
     </div>
   )
 }

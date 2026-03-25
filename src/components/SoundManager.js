@@ -1,149 +1,162 @@
 import { useEffect, useRef } from 'react'
 
 const PRESETS = {
-  memory: { root: 261.63, density: 0.9, air: 0.22, warmth: 0.42 },
-  warm: { root: 293.66, density: 1.05, air: 0.28, warmth: 0.5 },
-  dim: { root: 246.94, density: 0.85, air: 0.2, warmth: 0.36 },
-  bright: { root: 329.63, density: 1.1, air: 0.32, warmth: 0.54 },
-  finale: { root: 392, density: 1.2, air: 0.4, warmth: 0.62 }
+  memory: { root: 261.63, density: 0.82, brightness: 0.55 },
+  warm: { root: 293.66, density: 0.95, brightness: 0.62 },
+  dim: { root: 246.94, density: 0.75, brightness: 0.48 },
+  bright: { root: 329.63, density: 1.02, brightness: 0.7 },
+  finale: { root: 392, density: 1.12, brightness: 0.78 }
 }
 
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value))
 
-function createNoiseBuffer(audioContext) {
-  const sampleRate = audioContext.sampleRate
-  const buffer = audioContext.createBuffer(1, sampleRate * 1.2, sampleRate)
-  const data = buffer.getChannelData(0)
-
-  for (let i = 0; i < data.length; i += 1) {
-    data[i] = (Math.random() * 2 - 1) * 0.2
-  }
-
-  return buffer
-}
-
-function createImpulseResponse(audioContext, length = 2.6, decay = 3.2) {
+function createImpulseResponse(audioContext, length = 2.8, decay = 2.6) {
   const sampleRate = audioContext.sampleRate
   const size = Math.floor(sampleRate * length)
   const impulse = audioContext.createBuffer(2, size, sampleRate)
 
   for (let channel = 0; channel < impulse.numberOfChannels; channel += 1) {
-    const channelData = impulse.getChannelData(channel)
+    const data = impulse.getChannelData(channel)
     for (let i = 0; i < size; i += 1) {
-      const n = Math.random() * 2 - 1
-      channelData[i] = n * Math.pow(1 - i / size, decay)
+      data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / size, decay)
     }
   }
 
   return impulse
 }
 
-function createSceneLayer(audioContext, preset, sceneKey) {
+function createHammerNoise(audioContext) {
+  const size = Math.floor(audioContext.sampleRate * 0.07)
+  const buffer = audioContext.createBuffer(1, size, audioContext.sampleRate)
+  const data = buffer.getChannelData(0)
+
+  for (let i = 0; i < size; i += 1) {
+    data[i] = (Math.random() * 2 - 1) * (1 - i / size)
+  }
+
+  return buffer
+}
+
+function triggerPianoNote(audioContext, frequency, destination, velocity, brightness, noiseBuffer) {
+  const now = audioContext.currentTime
+  const toneA = audioContext.createOscillator()
+  const toneB = audioContext.createOscillator()
+  const envelope = audioContext.createGain()
+  const noteFilter = audioContext.createBiquadFilter()
+  const hammer = audioContext.createBufferSource()
+  const hammerFilter = audioContext.createBiquadFilter()
+  const hammerGain = audioContext.createGain()
+
+  toneA.type = 'triangle'
+  toneB.type = 'triangle'
+  toneA.frequency.value = frequency
+  toneB.frequency.value = frequency * 2
+  toneB.detune.value = 3
+
+  noteFilter.type = 'lowpass'
+  noteFilter.frequency.value = 1800 + brightness * 2600
+  noteFilter.Q.value = 0.4
+
+  const peak = clamp(0.06 * velocity, 0.02, 0.095)
+  envelope.gain.setValueAtTime(0.0001, now)
+  envelope.gain.linearRampToValueAtTime(peak, now + 0.01)
+  envelope.gain.exponentialRampToValueAtTime(peak * 0.42, now + 0.16)
+  envelope.gain.exponentialRampToValueAtTime(0.0001, now + 1.7)
+
+  hammer.buffer = noiseBuffer
+  hammerFilter.type = 'bandpass'
+  hammerFilter.frequency.value = 1800 + Math.random() * 1200
+  hammerFilter.Q.value = 0.5
+  hammerGain.gain.setValueAtTime(0.015 * velocity, now)
+  hammerGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.08)
+
+  toneA.connect(noteFilter)
+  toneB.connect(noteFilter)
+  noteFilter.connect(envelope)
+  envelope.connect(destination)
+
+  hammer.connect(hammerFilter)
+  hammerFilter.connect(hammerGain)
+  hammerGain.connect(destination)
+
+  toneA.start(now)
+  toneB.start(now)
+  hammer.start(now)
+
+  toneA.stop(now + 1.9)
+  toneB.stop(now + 1.9)
+  hammer.stop(now + 0.1)
+}
+
+function createSceneLayer(audioContext, preset, sceneKey, emotionalPeak = false) {
   const output = audioContext.createGain()
-  const dryGain = audioContext.createGain()
-  const wetGain = audioContext.createGain()
+  const dry = audioContext.createGain()
+  const wet = audioContext.createGain()
   const reverb = audioContext.createConvolver()
-  const masterFilter = audioContext.createBiquadFilter()
   const highPass = audioContext.createBiquadFilter()
+  const masterFilter = audioContext.createBiquadFilter()
+  const hammerNoise = createHammerNoise(audioContext)
 
-  const noise = audioContext.createBufferSource()
-  const noiseFilter = audioContext.createBiquadFilter()
-  const noiseGain = audioContext.createGain()
-
-  const intervals = [0, 4, 7, 9, 12]
+  const scale = [0, 2, 4, 7, 9, 12]
   let isStopped = false
-  let noteTimeout = null
+  let timer = null
 
   output.gain.value = 0.0001
-
-  dryGain.gain.value = 0.72
-  wetGain.gain.value = 0.34 + preset.air * 0.18
+  dry.gain.value = 0.85
+  wet.gain.value = emotionalPeak ? 0.31 : 0.24
 
   highPass.type = 'highpass'
-  highPass.frequency.value = 145
-  highPass.Q.value = 0.25
+  highPass.frequency.value = 120
 
   masterFilter.type = 'lowpass'
-  masterFilter.frequency.value = 3400 + preset.warmth * 1800
-  masterFilter.Q.value = 0.6
+  masterFilter.frequency.value = 3200 + preset.brightness * 2200
 
   reverb.buffer = createImpulseResponse(audioContext)
 
-  noise.buffer = createNoiseBuffer(audioContext)
-  noise.loop = true
-  noiseFilter.type = 'highpass'
-  noiseFilter.frequency.value = 3800
-  noiseFilter.Q.value = 0.2
-  noiseGain.gain.value = 0.002 + preset.air * 0.004
-
-  dryGain.connect(highPass)
+  dry.connect(highPass)
   highPass.connect(masterFilter)
   masterFilter.connect(output)
 
-  dryGain.connect(reverb)
-  reverb.connect(wetGain)
-  wetGain.connect(output)
+  highPass.connect(reverb)
+  reverb.connect(wet)
+  wet.connect(output)
 
-  noise.connect(noiseFilter)
-  noiseFilter.connect(noiseGain)
-  noiseGain.connect(wetGain)
+  let step = (sceneKey || '').length % scale.length
 
-  noise.start(audioContext.currentTime)
-
-  const pseudoSeed = (sceneKey || '').split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)
-  let noteStep = pseudoSeed % intervals.length
-
-  const playNote = () => {
+  const playStep = () => {
     if (isStopped) return
 
-    const note = audioContext.createOscillator()
-    const noteGain = audioContext.createGain()
-    const noteFilter = audioContext.createBiquadFilter()
+    const octave = emotionalPeak ? (step % 2 === 0 ? 1 : 2) : step % 3 === 0 ? 0.5 : 1
+    const semitone = scale[step % scale.length]
+    const freq = preset.root * octave * Math.pow(2, semitone / 12)
+    const velocity = emotionalPeak ? 1.05 : 0.9 + Math.random() * 0.15
 
-    const octave = noteStep % 3 === 0 ? 0.5 : 1
-    const semitone = intervals[noteStep % intervals.length]
-    const frequency = preset.root * octave * Math.pow(2, semitone / 12)
+    triggerPianoNote(audioContext, freq, dry, velocity, preset.brightness, hammerNoise)
 
-    note.type = 'triangle'
-    note.frequency.value = frequency
-    note.detune.value = (Math.random() - 0.5) * 7
+    // Occasionally drop a higher harmony note for cinematic lift.
+    if (Math.random() > (emotionalPeak ? 0.48 : 0.7)) {
+      triggerPianoNote(
+        audioContext,
+        freq * 2,
+        dry,
+        velocity * 0.52,
+        preset.brightness + 0.08,
+        hammerNoise
+      )
+    }
 
-    noteFilter.type = 'lowpass'
-    noteFilter.frequency.value = 2400 + Math.random() * 1200
-    noteFilter.Q.value = 0.45
-
-    const attack = 0.75 + Math.random() * 0.45
-    const hold = 0.8 + Math.random() * 0.8
-    const release = 1.8 + Math.random() * 1.4
-    const peak = 0.03 + preset.density * 0.028
-
-    const startAt = audioContext.currentTime
-    noteGain.gain.setValueAtTime(0.0001, startAt)
-    noteGain.gain.linearRampToValueAtTime(peak, startAt + attack)
-    noteGain.gain.linearRampToValueAtTime(peak * 0.78, startAt + attack + hold)
-    noteGain.gain.exponentialRampToValueAtTime(0.0001, startAt + attack + hold + release)
-
-    note.connect(noteFilter)
-    noteFilter.connect(noteGain)
-    noteGain.connect(dryGain)
-
-    note.start(startAt)
-    note.stop(startAt + attack + hold + release + 0.05)
-
-    noteStep += 1
-
-    const beat = 1500 + Math.random() * 1500
-    noteTimeout = window.setTimeout(playNote, beat / preset.density)
+    step += 1
+    const interval = (900 + Math.random() * 950) / preset.density
+    timer = window.setTimeout(playStep, interval)
   }
 
-  noteTimeout = window.setTimeout(playNote, 400)
+  timer = window.setTimeout(playStep, 360)
 
   return {
     output,
-    fadeIn(target, duration) {
-      const safeTarget = clamp(target, 0, 1)
+    fadeIn(level, duration) {
       output.gain.cancelScheduledValues(audioContext.currentTime)
-      output.gain.setTargetAtTime(safeTarget, audioContext.currentTime, duration)
+      output.gain.setTargetAtTime(clamp(level, 0, 1), audioContext.currentTime, duration)
     },
     fadeOut(duration) {
       output.gain.cancelScheduledValues(audioContext.currentTime)
@@ -151,90 +164,74 @@ function createSceneLayer(audioContext, preset, sceneKey) {
     },
     stopAfter(ms) {
       isStopped = true
-      if (noteTimeout) {
-        window.clearTimeout(noteTimeout)
-        noteTimeout = null
+      if (timer) {
+        window.clearTimeout(timer)
+        timer = null
       }
 
-      const stopAt = audioContext.currentTime + ms / 1000
-      try {
-        noise.stop(stopAt)
-      } catch (err) {
-        // Noise can already be stopped in strict mode re-mounts.
-      }
+      output.gain.cancelScheduledValues(audioContext.currentTime)
+      output.gain.setTargetAtTime(0.0001, audioContext.currentTime, ms / 2200)
     }
   }
 }
 
-export default function SoundManager({ scene, enabled, muted, volume }) {
-  const audioContextRef = useRef(null)
-  const masterGainRef = useRef(null)
-  const currentLayerRef = useRef(null)
+export default function SoundManager({ scene, enabled }) {
+  const contextRef = useRef(null)
+  const masterRef = useRef(null)
+  const layerRef = useRef(null)
 
   useEffect(() => {
-    if (!enabled || audioContextRef.current) return
+    if (!enabled || contextRef.current) return
 
-    const audioContext = new (window.AudioContext || window.webkitAudioContext)()
-    const masterGain = audioContext.createGain()
+    const context = new (window.AudioContext || window.webkitAudioContext)()
+    const master = context.createGain()
 
-    masterGain.gain.value = 0.0001
-    masterGain.connect(audioContext.destination)
+    master.gain.value = 0.0001
+    master.connect(context.destination)
 
-    audioContextRef.current = audioContext
-    masterGainRef.current = masterGain
+    contextRef.current = context
+    masterRef.current = master
 
-    if (audioContext.state === 'suspended') {
-      audioContext.resume().catch(() => {})
+    if (context.state === 'suspended') {
+      context.resume().catch(() => {})
     }
 
     return () => {
-      if (currentLayerRef.current) {
-        currentLayerRef.current.fadeOut(0.4)
-        currentLayerRef.current.stopAfter(480)
-        currentLayerRef.current = null
+      if (layerRef.current) {
+        layerRef.current.fadeOut(0.35)
+        layerRef.current.stopAfter(420)
+        layerRef.current = null
       }
 
-      audioContext.close().catch(() => {})
-      audioContextRef.current = null
-      masterGainRef.current = null
+      context.close().catch(() => {})
+      contextRef.current = null
+      masterRef.current = null
     }
   }, [enabled])
 
   useEffect(() => {
     if (!enabled || !scene) return
 
-    const audioContext = audioContextRef.current
-    const masterGain = masterGainRef.current
-    if (!audioContext || !masterGain) return
+    const context = contextRef.current
+    const master = masterRef.current
+    if (!context || !master) return
 
-    if (audioContext.state === 'suspended') {
-      audioContext.resume().catch(() => {})
+    if (context.state === 'suspended') {
+      context.resume().catch(() => {})
     }
 
     const preset = PRESETS[scene.sound] || PRESETS.memory
-    const nextLayer = createSceneLayer(audioContext, preset, scene.id)
-    nextLayer.output.connect(masterGain)
+    const nextLayer = createSceneLayer(context, preset, scene.id, Boolean(scene.emotionalPeak))
+    nextLayer.output.connect(master)
+    nextLayer.fadeIn(scene.emotionalPeak ? 0.52 : 0.42, scene.emotionalPeak ? 1.5 : 1)
 
-    const targetLevel = scene.emotionalPeak ? 0.62 : 0.5
-    nextLayer.fadeIn(targetLevel, scene.emotionalPeak ? 2.4 : 1.7)
-
-    if (currentLayerRef.current) {
-      currentLayerRef.current.fadeOut(1.2)
-      currentLayerRef.current.stopAfter(1600)
+    if (layerRef.current) {
+      layerRef.current.fadeOut(0.9)
+      layerRef.current.stopAfter(1200)
     }
 
-    currentLayerRef.current = nextLayer
+    layerRef.current = nextLayer
   }, [scene, enabled])
-
-  useEffect(() => {
-    const audioContext = audioContextRef.current
-    const masterGain = masterGainRef.current
-    if (!audioContext || !masterGain || !enabled) return
-
-    const target = muted ? 0.0001 : clamp(volume, 0, 1)
-    masterGain.gain.cancelScheduledValues(audioContext.currentTime)
-    masterGain.gain.setTargetAtTime(target, audioContext.currentTime, 0.45)
-  }, [muted, volume, enabled])
 
   return null
 }
