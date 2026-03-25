@@ -128,8 +128,10 @@ body {
 .continue-hint {
   position: absolute;
   bottom: clamp(1.4rem, 4vw, 2.6rem);
-  left: 50%;
-  transform: translateX(-50%);
+  left: 0;
+  right: 0;
+  width: 100%;
+  text-align: center;
   font-family: 'Manrope', sans-serif;
   font-size: 0.82rem;
   letter-spacing: 0.19em;
